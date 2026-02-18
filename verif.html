@@ -16,34 +16,48 @@
 <p id="message">Chargement...</p>
 
 <script>
-// Exemple de base de données
-const membres = [
-  {id: "MBR-ABC123", statut: "Valide"},
-  {id: "MBR-XYZ789", statut: "Suspendue"},
-  {id: "MBR-TEST01", statut: "Non valide"}
-];
+// Lien CSV de ton Google Sheet publié
+const sheetCSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT2b_-zD5_FRVndUKewJzSAfR41uA71TRKUm__OPRXUwdmwe7YiSRIp0tP7VWqW2jy0Furvn7FGiBQi/pub?output=csv";
 
-// Récupérer l'ID depuis l'URL
+// Récupérer l'ID du QR code depuis l'URL
 const params = new URLSearchParams(window.location.search);
 const code = params.get('id');
 
 const message = document.getElementById("message");
 
-if(!code){
-  message.textContent = "Aucun code détecté dans le QR.";
-  message.className = "nonvalide";
-} else {
-  const membre = membres.find(m => m.id === code.toUpperCase());
-  if(membre){
-    if(membre.statut === "Valide") message.className = "valide";
-    else if(membre.statut === "Suspendue") message.className = "suspendue";
-    else message.className = "nonvalide";
-    message.textContent = "Statut de la carte : " + membre.statut;
-  } else {
-    message.textContent = "Code non reconnu / Non valide";
+// Lire le CSV du Google Sheet
+fetch(sheetCSV)
+  .then(response => response.text())
+  .then(csvText => {
+    const lines = csvText.split('\n');
+    let found = false;
+
+    for(let i=1; i<lines.length; i++){ // Commence à 1 pour sauter l'en-tête
+      const row = lines[i].split(',');
+      const codeUnique = row[6]?.trim(); // Colonne G = Code unique
+      const statut = row[9]?.trim();     // Colonne J = Statut
+
+      if(code && code.toUpperCase() === codeUnique){
+        found = true;
+        if(statut === "Valide") message.className = "valide";
+        else if(statut === "Suspendue") message.className = "suspendue";
+        else message.className = "nonvalide";
+
+        message.textContent = "Statut de la carte : " + statut;
+        break;
+      }
+    }
+
+    if(!found){
+      message.className = "nonvalide";
+      message.textContent = "Code non reconnu / Non valide";
+    }
+  })
+  .catch(err => {
     message.className = "nonvalide";
-  }
-}
+    message.textContent = "Erreur lors de la vérification.";
+    console.error(err);
+  });
 </script>
 
 </body>
