@@ -8,12 +8,18 @@
   .valide { color: green; font-size: 24px; }
   .suspendue { color: orange; font-size: 24px; }
   .nonvalide { color: red; font-size: 24px; }
+  .nom-prenom { font-size: 28px; font-weight: bold; margin-bottom: 10px; }
+  .titre { font-size: 22px; margin-bottom: 20px; }
 </style>
 </head>
 <body>
 
 <h1>Vérification de Carte</h1>
-<p id="message">Chargement...</p>
+<div id="info">
+  <p class="nom-prenom" id="nomPrenom"></p>
+  <p class="titre">Vérification de Carte France Alumni Bénin</p>
+  <p id="message">Chargement...</p>
+</div>
 
 <script>
 // Lien CSV de ton Google Sheet publié
@@ -24,6 +30,7 @@ const params = new URLSearchParams(window.location.search);
 const code = params.get('id');
 
 const message = document.getElementById("message");
+const nomPrenom = document.getElementById("nomPrenom");
 
 // Lire le CSV du Google Sheet
 fetch(sheetCSV)
@@ -36,9 +43,13 @@ fetch(sheetCSV)
       const row = lines[i].split(',');
       const codeUnique = row[6]?.trim(); // Colonne G = Code unique
       const statut = row[9]?.trim();     // Colonne J = Statut
+      const nom = row[0]?.trim();        // Colonne A = Nom
+      const prenom = row[1]?.trim();     // Colonne B = Prénom
 
       if(code && code.toUpperCase() === codeUnique){
         found = true;
+        nomPrenom.textContent = nom + " " + prenom;
+
         if(statut === "Valide") message.className = "valide";
         else if(statut === "Suspendue") message.className = "suspendue";
         else message.className = "nonvalide";
@@ -49,11 +60,13 @@ fetch(sheetCSV)
     }
 
     if(!found){
+      nomPrenom.textContent = "";
       message.className = "nonvalide";
       message.textContent = "Code non reconnu / Non valide";
     }
   })
   .catch(err => {
+    nomPrenom.textContent = "";
     message.className = "nonvalide";
     message.textContent = "Erreur lors de la vérification.";
     console.error(err);
