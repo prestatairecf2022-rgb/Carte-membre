@@ -32,19 +32,47 @@ const code = params.get('id');
 const message = document.getElementById("message");
 const nomPrenom = document.getElementById("nomPrenom");
 
+// Fonction pour parser le CSV correctement avec guillemets et virgules
+function parseCSV(text) {
+  const rows = [];
+  const lines = text.split('\n');
+  for (let line of lines) {
+    const values = [];
+    let value = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"' && line[i+1] === '"') { // double guillemet
+        value += '"';
+        i++;
+      } else if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === ',' && !inQuotes) {
+        values.push(value);
+        value = '';
+      } else {
+        value += char;
+      }
+    }
+    values.push(value);
+    rows.push(values);
+  }
+  return rows;
+}
+
 // Lire le CSV du Google Sheet
 fetch(sheetCSV)
   .then(response => response.text())
   .then(csvText => {
-    const lines = csvText.split('\n');
+    const lines = parseCSV(csvText);
     let found = false;
 
     for(let i=1; i<lines.length; i++){ // Commence à 1 pour sauter l'en-tête
-      const row = lines[i].split(',');
-      const codeUnique = row[6]?.trim(); // Colonne G = Code unique
-      const statut = row[9]?.trim();     // Colonne J = Statut
+      const row = lines[i];
       const nom = row[0]?.trim();        // Colonne A = Nom
       const prenom = row[1]?.trim();     // Colonne B = Prénom
+      const codeUnique = row[6]?.trim(); // Colonne G = Code unique
+      const statut = row[9]?.trim();     // Colonne J = Statut
 
       if(code && code.toUpperCase() === codeUnique){
         found = true;
