@@ -15,24 +15,22 @@
 <body>
 
 <h1>Vérification de Carte</h1>
+
 <div id="info">
   <p class="nom-prenom" id="nomPrenom"></p>
-  <p class="titre">Vérification de Carte France Alumni Bénin</p>
+  <p class="titre">France Alumni Bénin</p>
   <p id="message">Chargement...</p>
 </div>
 
 <script>
-// Lien CSV de ton Google Sheet publié
-const sheetCSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT2b_-zD5_FRVndUKewJzSAfR41uA71TRKUm__OPRXUwdmwe7YiSRIp0tP7VWqW2jy0Furvn7FGiBQi/pub?output=csv";
+const sheetCSV = "TON LIEN CSV ICI";
 
-// Récupérer l'ID du QR code depuis l'URL
 const params = new URLSearchParams(window.location.search);
 const code = params.get('id');
 
 const message = document.getElementById("message");
 const nomPrenom = document.getElementById("nomPrenom");
 
-// Fonction pour parser le CSV correctement avec guillemets et virgules
 function parseCSV(text) {
   const rows = [];
   const lines = text.split('\n');
@@ -42,7 +40,7 @@ function parseCSV(text) {
     let inQuotes = false;
     for (let i = 0; i < line.length; i++) {
       const char = line[i];
-      if (char === '"' && line[i+1] === '"') { // double guillemet
+      if (char === '"' && line[i+1] === '"') {
         value += '"';
         i++;
       } else if (char === '"') {
@@ -60,19 +58,18 @@ function parseCSV(text) {
   return rows;
 }
 
-// Lire le CSV du Google Sheet
 fetch(sheetCSV)
   .then(response => response.text())
   .then(csvText => {
     const lines = parseCSV(csvText);
     let found = false;
 
-    for(let i=1; i<lines.length; i++){ // Commence à 1 pour sauter l'en-tête
+    for(let i=1; i<lines.length; i++){
       const row = lines[i];
-      const nom = row[0]?.trim();        // Colonne A = Nom
-      const prenom = row[1]?.trim();     // Colonne B = Prénom
-      const codeUnique = row[6]?.trim(); // Colonne G = Code unique
-      const statut = row[9]?.trim();     // Colonne J = Statut
+      const nom = row[0]?.trim();
+      const prenom = row[1]?.trim();
+      const codeUnique = row[6]?.trim();
+      const statut = row[9]?.trim();
 
       if(code && code.toUpperCase() === codeUnique){
         found = true;
@@ -82,7 +79,7 @@ fetch(sheetCSV)
         else if(statut === "Suspendue") message.className = "suspendue";
         else message.className = "nonvalide";
 
-        message.textContent = "Statut de la carte : " + statut;
+        message.textContent = "Statut : " + statut;
         break;
       }
     }
