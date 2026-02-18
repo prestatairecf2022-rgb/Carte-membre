@@ -2,95 +2,103 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Vérification Carte</title>
-
+<title>Vérification Carte Membre</title>
 <style>
-body {
-  font-family: Arial, sans-serif;
-  text-align: center;
-  margin-top: 60px;
-}
-
-.nom-prenom {
-  font-size: 28px;
-  font-weight: bold;
-}
-
-.titre {
-  font-size: 20px;
-  margin: 10px 0;
-}
-
-.valide { color: green; font-size: 22px; }
-.suspendue { color: orange; font-size: 22px; }
-.nonvalide { color: red; font-size: 22px; }
+  body { font-family: Arial; text-align: center; margin-top: 50px; }
+  .valide { color: green; font-size: 24px; }
+  .suspendue { color: orange; font-size: 24px; }
+  .nonvalide { color: red; font-size: 24px; }
+  .nom-prenom { font-size: 28px; font-weight: bold; margin-bottom: 10px; }
+  .titre { font-size: 22px; margin-bottom: 20px; }
 </style>
 </head>
-
 <body>
 
-<p class="nom-prenom" id="nomPrenom"></p>
-<p class="titre">France Alumni Bénin</p>
-<p id="message">Chargement...</p>
+<h1>Vérification de Carte</h1>
+<div id="info">
+  <p class="nom-prenom" id="nomPrenom"></p>
+  <p class="titre">France Alumni Bénin</p>
+  <p id="message">Chargement...</p>
+</div>
 
 <script>
+// Lien CSV de ton Google Sheet publié
+const sheetCSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT2b_-zD5_FRVndUKewJzSAfR41uA71TRKUm__OPRXUwdmwe7YiSRIp0tP7VWqW2jy0Furvn7FGiBQi/pub?output=csv";
 
-// 👉 REMPLACE PAR TON LIEN CSV PUBLIÉ
-const CSV_URL = "COLLE_TON_LIEN_CSV_ICI";
-
-// Lire code depuis URL
+// Récupérer l'ID du QR code depuis l'URL
 const params = new URLSearchParams(window.location.search);
-const code = params.get("id");
+const code = params.get('id');
 
-const nomPrenom = document.getElementById("nomPrenom");
 const message = document.getElementById("message");
+const nomPrenom = document.getElementById("nomPrenom");
 
-if (!code) {
-  message.textContent = "Aucun code détecté.";
-  message.className = "nonvalide";
+// Fonction pour parser le CSV correctement avec guillemets et virgules
+function parseCSV(text) {
+  const rows = [];
+  const lines = text.split('\n');
+  for (let line of lines) {
+    const values = [];
+    let value = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"' && line[i+1] === '"') { // double guillemet
+        value += '"';
+        i++;
+      } else if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === ',' && !inQuotes) {
+        values.push(value);
+        value = '';
+      } else {
+        value += char;
+      }
+    }
+    values.push(value);
+    rows.push(values);
+  }
+  return rows;
 }
 
-// Charger la base Google Sheet
-fetch(CSV_URL)
-.then(response => response.text())
-.then(data => {
+// Lire le CSV du Google Sheet
+fetch(sheetCSV)
+  .then(response => response.text())
+  .then(csvText => {
+    const lines = parseCSV(csvText);
+    let found = false;
 
-  const lignes = data.split("\n").slice(1); // enlever en-tête
+    for(let i=1; i<lines.length; i++){ // Commence à 1 pour sauter l'en-tête
+      const row = lines[i];
+      const nom = row[0]?.trim();        // Colonne A = Nom
+      const prenom = row[1]?.trim();     // Colonne B = Prénom
+      const codeUnique = row[6]?.trim(); // Colonne G = Code unique
+      const statut = row[9]?.trim();     // Colonne J = Statut
 
-  let trouve = false;
+      if(code && code.toUpperCase() === codeUnique){
+        found = true;
+        nomPrenom.textContent = nom + " " + prenom;
 
-  lignes.forEach(ligne => {
-    const colonnes = ligne.split(",");
+        if(statut === "Valide") message.className = "valide";
+        else if(statut === "Suspendue") message.className = "suspendue";
+        else message.className = "nonvalide";
 
-    const nom = colonnes[0];
-    const prenom = colonnes[1];
-    const codeSheet = colonnes[6];
-    const statut = colonnes[9];
-
-    if (codeSheet === code) {
-      trouve = true;
-
-      nomPrenom.textContent = nom + " " + prenom;
-
-      if (statut === "Valide") message.className = "valide";
-      else if (statut === "Suspendue") message.className = "suspendue";
-      else message.className = "nonvalide";
-
-      message.textContent = "Statut : " + statut;
+        message.textContent = "Statut : " + statut;
+        break;
+      }
     }
-  });
 
-  if (!trouve) {
-    message.textContent = "Code non reconnu / Non valide";
+    if(!found){
+      nomPrenom.textContent = "";
+      message.className = "nonvalide";
+      message.textContent = "Code non reconnu / Non valide";
+    }
+  })
+  .catch(err => {
+    nomPrenom.textContent = "";
     message.className = "nonvalide";
-  }
-
-})
-.catch(() => {
-  message.textContent = "Erreur de connexion à la base.";
-  message.className = "nonvalide";
-});
-
+    message.textContent = "Erreur lors de la vérification.";
+    console.error(err);
+  });
 </script>
 
 </body>
